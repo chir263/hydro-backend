@@ -1,0 +1,11 @@
+numpy
+geopandas
+rasterio
+matplotlib
+scikit-image
+scipy
+fiona==1.9.6
+shapely
+pyproj
+flask
+flask_restx
