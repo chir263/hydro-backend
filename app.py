@@ -2,8 +2,16 @@ from flask import Flask, jsonify
 from flask_restx import Api, Resource, fields
 from werkzeug.middleware.proxy_fix import ProxyFix
 from hydrological_data import process_hydrological_data
+import random
+import os
+import string
+from flask import request, jsonify
+from flask_restx import Resource, Namespace
+from flask_cors import CORS
+
 
 app = Flask(__name__)
+CORS(app)  
 app.wsgi_app = ProxyFix(app.wsgi_app)
 
 api = Api(
@@ -25,15 +33,33 @@ rainfall_inflow_model = api.model('RainfallInflow', {
 @ns.route('/get_rainfall_inflow')
 class RainfallInflow(Resource):
     @ns.doc('get_rainfall_inflow')
-    @ns.marshal_with(rainfall_inflow_model)
-    def get(self):
-        """Get a rainfall inflow"""
-        from datetime import datetime
-        return {
-            'message': 'Hello, World!',
-            'timestamp': datetime.now(),
-            'rainfall_inflow': process_hydrological_data('rainfall.tif'),
-        }
+    def post(self):
+        """Upload a rainfall TIFF file and return rainfall inflow."""
+        if 'file' not in request.files:
+            return {"error": "No file provided"}, 400
+
+        uploaded_file = request.files['file']
+
+        # Generate a random filename
+        random_filename = ''.join(random.choices(string.ascii_letters + string.digits, k=10)) + ".tif"
+        file_path = os.path.join("files", random_filename)
+
+        # Save the file
+        uploaded_file.save(file_path)
+
+        # Process the file to calculate rainfall inflow
+        try:
+            rainfall_inflow = process_hydrological_data(file_path)
+        except Exception as e:
+            return {"error": str(e)}, 500
+
+        # Return the result
+        return jsonify({
+            "message": "Rainfall inflow calculated successfully.",
+            "rainfall_inflow": rainfall_inflow,
+            "filename": random_filename
+        })
+
 
 @ns.route('/health')
 class Health(Resource):
