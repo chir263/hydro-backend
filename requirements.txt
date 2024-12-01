@@ -9,3 +9,4 @@ shapely
 pyproj
 flask
 flask_restx
+flask-cors

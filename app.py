@@ -68,5 +68,84 @@ class Health(Resource):
         """Get API health status"""
         return {'status': 'healthy'}
 
+
+def train_lstm_model(file_path):
+    try:
+        import pandas as pd
+        import numpy as np
+        from keras.models import Sequential
+        from keras.layers import LSTM, Dense
+
+        data = pd.read_csv(file_path)
+        features = data[['et', 'storage', 'rainfall']].values
+        targets = data['inflow'].values
+
+        # Reshape for LSTM (samples, timesteps, features)
+        features = features.reshape((features.shape[0], 1, features.shape[1]))
+
+        model = Sequential([
+            LSTM(50, activation='relu', input_shape=(1, 3)),
+            Dense(1)
+        ])
+        model.compile(optimizer='adam', loss='mse')
+        model.fit(features, targets, epochs=50, batch_size=32)
+
+        model.save('lstm_model.h5')
+    except Exception as e:
+        print(e)
+        raise e
+
+def predict_inflow(evapotranspiration, storage, rainfall_value):
+    import numpy as np
+    from keras.models import load_model
+
+    model = load_model('lstm_model.h5')
+    input_data = np.array([[evapotranspiration, storage, rainfall_value]])
+    input_data = input_data.reshape((1, 1, 3))
+
+    prediction = model.predict(input_data)
+    return float(prediction[0][0])
+  
+
+@ns.route('/upload_train_data')
+class UploadTrainData(Resource):
+    @ns.doc('upload_train_data')
+    def post(self):
+        """Upload training data and train the LSTM model."""
+        if 'file' not in request.files:
+            return {"error": "No file provided"}, 400
+
+        file = request.files['file']
+        if not file.filename.endswith('.csv'):
+            return {"error": "Invalid file type. Only CSV files are allowed."}, 400
+
+        file_path = os.path.join("files", file.filename)
+        file.save(file_path)
+
+        try:
+            train_lstm_model(file_path)
+            return {"message": "Training completed successfully."}, 200
+        except Exception as e:
+            print(e)
+            return {"error": str(e)}, 500
+
+
+@ns.route('/predict_inflow')
+class PredictInflow(Resource):
+    @ns.doc('predict_inflow')
+    def post(self):
+        """Predict inflow based on input parameters."""
+        data = request.json
+        try:
+            evapotranspiration = float(data['evapotranspiration'])
+            storage = float(data['storage'])
+            rainfall_value = float(data['rainfallValue'])
+
+            inflow = predict_inflow(evapotranspiration, storage, rainfall_value)
+            return {"predicted_inflow": inflow}, 200
+        except Exception as e:
+            return {"error": str(e)}, 500
+
+
 if __name__ == '__main__':
     app.run(debug=True)
