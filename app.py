@@ -95,6 +95,11 @@ def train_lstm_model(file_path):
         print(e)
         raise e
 
+def calculate_10Q7(inflow_tmc):
+    # Convert inflow to a 10-day flow (1 TMC = 10^9 cubic meters)
+    daily_flow_cubic_meters = (inflow_tmc * 10**9) / 10  # Divide by 10 days
+    return daily_flow_cubic_meters / (7 * 24 * 60 * 60 * 365)  # Convert to m³/s
+
 def predict_inflow(evapotranspiration, storage, rainfall_value):
     import numpy as np
     from keras.models import load_model
@@ -142,10 +147,13 @@ class PredictInflow(Resource):
             rainfall_value = float(data['rainfallValue'])
 
             inflow = predict_inflow(evapotranspiration, storage, rainfall_value)
-            return {"predicted_inflow": inflow}, 200
+            dqt = calculate_10Q7(inflow)
+
+            return {"predicted_inflow": inflow, "dqt": dqt}, 200
         except Exception as e:
             return {"error": str(e)}, 500
 
 
 if __name__ == '__main__':
     app.run(debug=True)
+

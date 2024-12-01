@@ -6,6 +6,7 @@ const Input = () => {
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [inflowPrediction, setInflowPrediction] = useState(null);
+  const [dqt, setDQT] = useState(null);
   const [predictionInputs, setPredictionInputs] = useState({
     evapotranspiration: "",
     storage: "",
@@ -85,6 +86,7 @@ const Input = () => {
 
       const result = await response.json();
       setInflowPrediction(result.predicted_inflow);
+      setDQT(result.dqt);
     } catch (error) {
       console.error("Error during prediction:", error);
       alert("Prediction failed. Please try again.");
@@ -113,30 +115,45 @@ const Input = () => {
 
       <h2 className="heading">Predict Inflow</h2>
       <form onSubmit={handlePredictionSubmit} className="form">
-        <input
-          type="number"
-          name="evapotranspiration"
-          placeholder="Evapotranspiration"
-          value={predictionInputs.evapotranspiration}
-          onChange={handlePredictionInputChange}
-          required
-        />
-        <input
-          type="number"
-          name="storage"
-          placeholder="Storage"
-          value={predictionInputs.storage}
-          onChange={handlePredictionInputChange}
-          required
-        />
-        <input
-          type="number"
-          name="rainfallValue"
-          placeholder="Rainfall Value"
-          value={predictionInputs.rainfallValue}
-          onChange={handlePredictionInputChange}
-          required
-        />
+        <div className="form-group">
+          <label htmlFor="evapotranspiration">
+            Evapotranspiration (mm/day):
+          </label>
+          <input
+            type="number"
+            name="evapotranspiration"
+            id="evapotranspiration"
+            placeholder="Enter evapotranspiration"
+            value={predictionInputs.evapotranspiration}
+            onChange={handlePredictionInputChange}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="storage">Storage (TMC):</label>
+          <br />
+          <input
+            type="number"
+            name="storage"
+            id="storage"
+            placeholder="Enter storage"
+            value={predictionInputs.storage}
+            onChange={handlePredictionInputChange}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="rainfallValue">Rainfall Value (mm):</label>
+          <input
+            type="number"
+            name="rainfallValue"
+            id="rainfallValue"
+            placeholder="Enter rainfall value"
+            value={predictionInputs.rainfallValue}
+            onChange={handlePredictionInputChange}
+            required
+          />
+        </div>
         <button type="submit" className="submit-button">
           Predict
         </button>
@@ -146,7 +163,11 @@ const Input = () => {
         <div className="rainfall-inflow-container">
           <h3 className="rainfall-heading">Predicted Inflow</h3>
           <p className="rainfall-value">
-            {inflowPrediction} <span className="unit">Inch Acre/Hour</span>
+            {inflowPrediction * 10000} <span className="unit">cusecs</span>
+          </p>
+          <h3 className="rainfall-heading">10Q7</h3>
+          <p className="rainfall-value">
+            {dqt} <span className="unit">m^3/s</span>
           </p>
         </div>
       )}
